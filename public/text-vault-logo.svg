@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Text Vault logo</title>
+  <rect width="64" height="64" rx="15" fill="#256b49"/>
+  <path d="M32 9.5 49 16v13.2c0 11.2-6.7 19.5-17 25.3-10.3-5.8-17-14.1-17-25.3V16z"
+    fill="#d9f2e2" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>
+  <text x="32" y="31.5" fill="#256b49" font-family="Arial, sans-serif" font-size="21" font-weight="700"
+    text-anchor="middle" dominant-baseline="middle">Aa</text>
+</svg>
