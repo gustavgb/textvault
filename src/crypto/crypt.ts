@@ -2,6 +2,7 @@ import {
   createAdditionalData,
   DEFAULT_KDF_PARAMS,
   IV_LENGTH,
+  MAX_PLAINTEXT_BYTES,
   parseEnvelope,
   SALT_LENGTH,
   serializeEnvelope,
@@ -41,6 +42,10 @@ export async function encryptText(
   const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
   const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
   const plaintextBytes = encoder.encode(plaintext);
+  if (plaintextBytes.length > MAX_PLAINTEXT_BYTES) {
+    plaintextBytes.fill(0);
+    throw new Error('Text is too large. The maximum size is 1 MiB.');
+  }
   const additionalData = createAdditionalData(DEFAULT_KDF_PARAMS, salt, iv, plaintextBytes.length);
   let rawKey: Uint8Array | undefined;
   try {
@@ -79,7 +84,7 @@ export async function decryptText(
       const encrypted = new Uint8Array(parsed.ciphertext.length + parsed.tag.length);
       encrypted.set(parsed.ciphertext);
       encrypted.set(parsed.tag, parsed.ciphertext.length);
-      const plaintext = await crypto.subtle.decrypt(
+      const plaintext = new Uint8Array(await crypto.subtle.decrypt(
         {
           name: 'AES-GCM',
           iv: toArrayBuffer(parsed.iv),
@@ -88,8 +93,12 @@ export async function decryptText(
         },
         key,
         toArrayBuffer(encrypted),
-      );
-      return decoder.decode(plaintext);
+      ));
+      try {
+        return decoder.decode(plaintext);
+      } finally {
+        plaintext.fill(0);
+      }
     } finally {
       rawKey.fill(0);
     }

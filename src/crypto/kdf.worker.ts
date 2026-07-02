@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { scrypt } from '@noble/hashes/scrypt.js';
+import { deriveScryptKey } from './scrypt';
 import type { KdfParams } from './types';
 
 interface DeriveRequest {
@@ -9,16 +9,10 @@ interface DeriveRequest {
   params: KdfParams;
 }
 
-self.onmessage = ({ data }: MessageEvent<DeriveRequest>) => {
+self.onmessage = async ({ data }: MessageEvent<DeriveRequest>) => {
   const { id, password, salt, params } = data;
   try {
-    const key = scrypt(password, salt, {
-      N: params.N,
-      r: params.r,
-      p: params.p,
-      dkLen: 32,
-      maxmem: 129 * 1024 * 1024,
-    });
+    const key = await deriveScryptKey(password, salt, params);
     self.postMessage({ id, key }, { transfer: [key.buffer] });
   } catch {
     self.postMessage({ id, error: 'Key derivation failed' });

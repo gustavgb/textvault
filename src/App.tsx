@@ -13,6 +13,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState<Action | null>(null);
   const [copied, setCopied] = useState(false);
+  const [outputAction, setOutputAction] = useState<Action | null>(null);
   const [pendingAction, setPendingAction] = useState<Action | null>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLElement>(null);
@@ -69,6 +70,7 @@ export default function App() {
     const action = pendingAction;
     setError('');
     setOutput('');
+    setOutputAction(null);
     setCopied(false);
 
     if (!password) {
@@ -92,11 +94,11 @@ export default function App() {
 
     setBusy(action);
     try {
-      setOutput(
-        action === 'encrypt'
-          ? await encryptText(input, password)
-          : await decryptText(input, password),
-      );
+      const result = action === 'encrypt'
+        ? await encryptText(input, password)
+        : await decryptText(input, password);
+      setOutput(result);
+      setOutputAction(action);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Something went wrong.');
     } finally {
@@ -109,9 +111,23 @@ export default function App() {
   }
 
   async function copyOutput() {
-    await navigator.clipboard.writeText(output);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+    try {
+      await navigator.clipboard.writeText(output);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setError('Clipboard access was denied by the browser.');
+    }
+  }
+
+  function clearAll() {
+    setInput('');
+    setOutput('');
+    setOutputAction(null);
+    setPassword('');
+    setConfirmation('');
+    setError('');
+    setCopied(false);
   }
 
   return (
@@ -128,7 +144,7 @@ export default function App() {
 
         <div className="privacy-note">
           <span aria-hidden="true">●</span>
-          Nothing is stored or sent anywhere.
+          Nothing is transmitted or intentionally stored by this app.
         </div>
 
         <label>
@@ -149,6 +165,9 @@ export default function App() {
           <button onClick={(event) => openPasswordPrompt('decrypt', event.currentTarget)} disabled={busy !== null}>
             {busy === 'decrypt' ? 'Deriving key…' : 'Decrypt'}
           </button>
+          <button onClick={clearAll} disabled={busy !== null || (!input && !output)}>
+            Clear all
+          </button>
         </div>
 
         <div className="message-space" aria-live="polite">
@@ -163,6 +182,9 @@ export default function App() {
         <output className={output ? 'output has-value' : 'output'}>
           {output || 'Your result will appear here.'}
         </output>
+        {output && outputAction === 'decrypt' && (
+          <p className="clipboard-warning">Copying plaintext may leave it in clipboard history managed by your browser or operating system.</p>
+        )}
 
         <footer>
           AES-256-GCM · scrypt ·{' '}
@@ -176,7 +198,8 @@ export default function App() {
           <h2 id="security-title">How your text is protected</h2>
           <p>
             Text Vault performs every operation locally in this browser. Your text, password, and encryption key are
-            never sent to a server, written to browser storage, or retained by the application after the operation.
+            are not transmitted or intentionally written to browser storage. Values remain in this page's memory until
+            you clear them or close the page; JavaScript strings cannot be reliably erased from browser memory.
           </p>
 
           <h3>From password to encryption key</h3>

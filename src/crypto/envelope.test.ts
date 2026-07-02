@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createAdditionalData,
   DEFAULT_KDF_PARAMS,
+  MAX_PLAINTEXT_BYTES,
   parseEnvelope,
   serializeEnvelope,
 } from './envelope';
@@ -32,6 +33,21 @@ describe('encrypted envelope', () => {
     const blob = serializeEnvelope(aad, new Uint8Array([1]), new Uint8Array(16));
     const raw = Uint8Array.from(atob(blob), (character) => character.charCodeAt(0));
     raw[4] = 2;
+    const modified = btoa(String.fromCharCode(...raw));
+    expect(() => parseEnvelope(modified)).toThrow('Invalid encrypted data');
+  });
+
+  it('rejects envelopes above the ciphertext size limit before decoding', () => {
+    const maximumEnvelopeBytes = 28 + 16 + 12 + MAX_PLAINTEXT_BYTES + 16;
+    const oversizedBase64 = 'A'.repeat(4 * Math.ceil(maximumEnvelopeBytes / 3) + 4);
+    expect(() => parseEnvelope(oversizedBase64)).toThrow('Invalid encrypted data');
+  });
+
+  it('rejects KDF parameters above the supported work limit', () => {
+    const aad = createAdditionalData(DEFAULT_KDF_PARAMS, new Uint8Array(16), new Uint8Array(12), 0);
+    const blob = serializeEnvelope(aad, new Uint8Array(), new Uint8Array(16));
+    const raw = Uint8Array.from(atob(blob), (character) => character.charCodeAt(0));
+    new DataView(raw.buffer).setUint32(16, 2, false);
     const modified = btoa(String.fromCharCode(...raw));
     expect(() => parseEnvelope(modified)).toThrow('Invalid encrypted data');
   });

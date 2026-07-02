@@ -5,10 +5,14 @@ const FIXED_HEADER_LENGTH = 28;
 const ENVELOPE_VERSION = 1;
 const KDF_SCRYPT = 1;
 const CIPHER_AES_256_GCM = 1;
+const MAX_KDF_MEMORY_BYTES = 129 * 1024 * 1024;
+const MAX_KDF_WORK = 131_072 * 8;
 
 export const SALT_LENGTH = 16;
 export const IV_LENGTH = 12;
 export const TAG_LENGTH = 16;
+export const MAX_PLAINTEXT_BYTES = 1024 * 1024;
+export const KDF_MAX_MEMORY_BYTES = MAX_KDF_MEMORY_BYTES;
 export const DEFAULT_KDF_PARAMS: KdfParams = {
   N: 131_072,
   r: 8,
@@ -40,7 +44,13 @@ function validateParams(params: KdfParams): void {
     throw new Error('Invalid encrypted data');
   }
   const memoryBytes = 128 * params.r * (params.N + params.p + 1);
-  if (!Number.isSafeInteger(memoryBytes) || memoryBytes > 256 * 1024 * 1024) {
+  const work = params.N * params.r * params.p;
+  if (
+    !Number.isSafeInteger(memoryBytes) ||
+    memoryBytes > MAX_KDF_MEMORY_BYTES ||
+    !Number.isSafeInteger(work) ||
+    work > MAX_KDF_WORK
+  ) {
     throw new Error('Invalid encrypted data');
   }
 }
@@ -52,7 +62,13 @@ export function createAdditionalData(
   ciphertextLength: number,
 ): Uint8Array {
   validateParams(params);
-  if (salt.length !== SALT_LENGTH || iv.length !== IV_LENGTH || ciphertextLength < 0) {
+  if (
+    salt.length !== SALT_LENGTH ||
+    iv.length !== IV_LENGTH ||
+    !Number.isInteger(ciphertextLength) ||
+    ciphertextLength < 0 ||
+    ciphertextLength > MAX_PLAINTEXT_BYTES
+  ) {
     throw new Error('Invalid encrypted data');
   }
 
@@ -145,7 +161,14 @@ function bytesToBase64(bytes: Uint8Array): string {
 }
 
 function base64ToBytes(value: string): Uint8Array {
-  if (!value || value.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(value)) {
+  const maximumEnvelopeBytes = FIXED_HEADER_LENGTH + SALT_LENGTH + IV_LENGTH + MAX_PLAINTEXT_BYTES + TAG_LENGTH;
+  const maximumBase64Length = 4 * Math.ceil(maximumEnvelopeBytes / 3);
+  if (
+    !value ||
+    value.length > maximumBase64Length ||
+    value.length % 4 !== 0 ||
+    !/^[A-Za-z0-9+/]+={0,2}$/.test(value)
+  ) {
     throw new Error('Invalid encrypted data');
   }
   try {

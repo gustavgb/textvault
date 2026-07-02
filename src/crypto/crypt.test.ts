@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { decryptText, encryptText } from './crypt';
+import { MAX_PLAINTEXT_BYTES } from './envelope';
 import type { DeriveKey } from './types';
 
 const quickDerive: DeriveKey = async (password, salt) => {
@@ -28,5 +29,17 @@ describe('text encryption', () => {
     raw[raw.length - 17] ^= 1;
     const tampered = btoa(String.fromCharCode(...raw));
     await expect(decryptText(tampered, 'correct horse battery', quickDerive)).rejects.toThrow('Unable to decrypt');
+  });
+
+  it('rejects plaintext above the size limit before deriving a key', async () => {
+    let derived = false;
+    const derive: DeriveKey = async (...args) => {
+      derived = true;
+      return quickDerive(...args);
+    };
+
+    await expect(encryptText('a'.repeat(MAX_PLAINTEXT_BYTES + 1), 'correct horse battery', derive))
+      .rejects.toThrow('maximum size is 1 MiB');
+    expect(derived).toBe(false);
   });
 });
