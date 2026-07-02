@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { argon2id } from '@noble/hashes/argon2.js';
+import { scrypt } from '@noble/hashes/scrypt.js';
 import type { KdfParams } from './types';
 
 interface DeriveRequest {
@@ -12,12 +12,12 @@ interface DeriveRequest {
 self.onmessage = ({ data }: MessageEvent<DeriveRequest>) => {
   const { id, password, salt, params } = data;
   try {
-    const key = argon2id(password, salt, {
-      t: params.iterations,
-      m: params.memory,
-      p: params.parallelism,
+    const key = scrypt(password, salt, {
+      N: params.N,
+      r: params.r,
+      p: params.p,
       dkLen: 32,
-      maxmem: 256 * 1024 * 1024,
+      maxmem: 129 * 1024 * 1024,
     });
     self.postMessage({ id, key }, { transfer: [key.buffer] });
   } catch {

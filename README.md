@@ -1,6 +1,6 @@
 # Text Vault
 
-A browser-only text encryption app using AES-256-GCM and Argon2id. Passwords, keys, plaintext, and ciphertext never leave the browser and are not persisted.
+A browser-only text encryption app using AES-256-GCM and scrypt. Passwords, keys, plaintext, and ciphertext never leave the browser and are not persisted.
 
 ## Development
 

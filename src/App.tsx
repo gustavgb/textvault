@@ -153,7 +153,7 @@ export default function App() {
 
         <div className="message-space" aria-live="polite">
           {error && <p className="error" role="alert">{error}</p>}
-          {busy && <p className="status">Argon2id is running securely in a background worker.</p>}
+          {busy && <p className="status">scrypt is running securely in a background worker.</p>}
         </div>
 
         <div className="output-heading">
@@ -165,7 +165,7 @@ export default function App() {
         </output>
 
         <footer>
-          AES-256-GCM · Argon2id ·{' '}
+          AES-256-GCM · scrypt ·{' '}
           <a href="https://github.com/gustavgb/textvault" target="_blank" rel="noreferrer">
             View on GitHub
           </a>
@@ -181,10 +181,10 @@ export default function App() {
 
           <h3>From password to encryption key</h3>
           <p>
-            Your password is converted into a 256-bit key with Argon2id, a memory-hard password derivation function.
-            Each new encryption uses a cryptographically random salt and runs Argon2id with 64 MiB of memory, three
-            iterations, and one parallel lane. This deliberately makes password guessing expensive. The derivation
-            runs in a background worker so the page remains responsive.
+            Your password is converted into a 256-bit key with scrypt, a memory-hard password derivation function.
+            Each new encryption uses a cryptographically random salt and runs scrypt with a work factor of 131,072,
+            a block size of 8, and one parallel lane, requiring approximately 128 MiB of memory. This deliberately
+            makes password guessing expensive. The derivation runs in a background worker so the page remains responsive.
           </p>
 
           <h3>Authenticated encryption</h3>
@@ -196,7 +196,7 @@ export default function App() {
 
           <h3>What the base64 output contains</h3>
           <p>
-            The output is one versioned binary envelope encoded as base64. It contains the salt, Argon2id parameters,
+            The output is one versioned binary envelope encoded as base64. It contains the salt, scrypt parameters,
             IV, ciphertext, and GCM authentication tag. None of these values reveals the password or plaintext. The
             stored parameters allow this app to decrypt older envelopes if the default KDF cost changes later.
           </p>
@@ -261,7 +261,7 @@ export default function App() {
                 </label>
               )}
               {error && <p className="modal-error" role="alert">{error}</p>}
-              {busy && <p className="status">Argon2id is running securely in a background worker.</p>}
+              {busy && <p className="status">scrypt is running securely in a background worker.</p>}
               <div className="modal-actions">
                 <button type="button" onClick={closePasswordPrompt} disabled={busy !== null}>Cancel</button>
                 <button type="submit" className="primary" disabled={busy !== null}>

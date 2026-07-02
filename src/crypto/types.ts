@@ -1,7 +1,7 @@
 export interface KdfParams {
-  memory: number;
-  iterations: number;
-  parallelism: number;
+  N: number;
+  r: number;
+  p: number;
 }
 
 export type DeriveKey = (

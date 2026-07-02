@@ -3,17 +3,16 @@ import type { KdfParams } from './types';
 const MAGIC = new Uint8Array([0x54, 0x58, 0x43, 0x54]); // TXCT
 const FIXED_HEADER_LENGTH = 28;
 const ENVELOPE_VERSION = 1;
-const KDF_ARGON2ID = 1;
+const KDF_SCRYPT = 1;
 const CIPHER_AES_256_GCM = 1;
-const ARGON2_VERSION = 0x13;
 
 export const SALT_LENGTH = 16;
 export const IV_LENGTH = 12;
 export const TAG_LENGTH = 16;
 export const DEFAULT_KDF_PARAMS: KdfParams = {
-  memory: 65_536,
-  iterations: 3,
-  parallelism: 1,
+  N: 131_072,
+  r: 8,
+  p: 1,
 };
 
 export interface ParsedEnvelope {
@@ -26,13 +25,22 @@ export interface ParsedEnvelope {
 }
 
 function validateParams(params: KdfParams): void {
-  if (!Number.isInteger(params.memory) || params.memory < 8_192 || params.memory > 262_144) {
+  if (
+    !Number.isInteger(params.N) ||
+    params.N < 16_384 ||
+    params.N > 1_048_576 ||
+    (params.N & (params.N - 1)) !== 0
+  ) {
     throw new Error('Invalid encrypted data');
   }
-  if (!Number.isInteger(params.iterations) || params.iterations < 1 || params.iterations > 10) {
+  if (!Number.isInteger(params.r) || params.r < 1 || params.r > 32) {
     throw new Error('Invalid encrypted data');
   }
-  if (!Number.isInteger(params.parallelism) || params.parallelism < 1 || params.parallelism > 4) {
+  if (!Number.isInteger(params.p) || params.p < 1 || params.p > 4) {
+    throw new Error('Invalid encrypted data');
+  }
+  const memoryBytes = 128 * params.r * (params.N + params.p + 1);
+  if (!Number.isSafeInteger(memoryBytes) || memoryBytes > 256 * 1024 * 1024) {
     throw new Error('Invalid encrypted data');
   }
 }
@@ -52,12 +60,12 @@ export function createAdditionalData(
   const view = new DataView(bytes.buffer);
   bytes.set(MAGIC, 0);
   bytes[4] = ENVELOPE_VERSION;
-  bytes[5] = KDF_ARGON2ID;
+  bytes[5] = KDF_SCRYPT;
   bytes[6] = CIPHER_AES_256_GCM;
-  bytes[7] = ARGON2_VERSION;
-  view.setUint32(8, params.memory, false);
-  view.setUint32(12, params.iterations, false);
-  view.setUint32(16, params.parallelism, false);
+  bytes[7] = 0;
+  view.setUint32(8, params.N, false);
+  view.setUint32(12, params.r, false);
+  view.setUint32(16, params.p, false);
   bytes[20] = salt.length;
   bytes[21] = iv.length;
   bytes[22] = TAG_LENGTH;
@@ -91,9 +99,9 @@ export function parseEnvelope(value: string): ParsedEnvelope {
   }
   if (
     bytes[4] !== ENVELOPE_VERSION ||
-    bytes[5] !== KDF_ARGON2ID ||
+    bytes[5] !== KDF_SCRYPT ||
     bytes[6] !== CIPHER_AES_256_GCM ||
-    bytes[7] !== ARGON2_VERSION ||
+    bytes[7] !== 0 ||
     bytes[20] !== SALT_LENGTH ||
     bytes[21] !== IV_LENGTH ||
     bytes[22] !== TAG_LENGTH ||
@@ -104,9 +112,9 @@ export function parseEnvelope(value: string): ParsedEnvelope {
 
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const params = {
-    memory: view.getUint32(8, false),
-    iterations: view.getUint32(12, false),
-    parallelism: view.getUint32(16, false),
+    N: view.getUint32(8, false),
+    r: view.getUint32(12, false),
+    p: view.getUint32(16, false),
   };
   validateParams(params);
   const ciphertextLength = view.getUint32(24, false);

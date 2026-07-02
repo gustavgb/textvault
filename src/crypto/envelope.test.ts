@@ -20,14 +20,7 @@ describe('encrypted envelope', () => {
     expect(parsed.iv).toEqual(iv);
     expect(parsed.ciphertext).toEqual(ciphertext);
     expect(parsed.tag).toEqual(tag);
-    expect(parsed.params.memory).toBe(65_536);
-  });
-
-  it('continues to parse envelopes using the previous 128 MiB KDF cost', () => {
-    const previousParams = { memory: 131_072, iterations: 3, parallelism: 1 };
-    const aad = createAdditionalData(previousParams, new Uint8Array(16), new Uint8Array(12), 0);
-    const parsed = parseEnvelope(serializeEnvelope(aad, new Uint8Array(), new Uint8Array(16)));
-    expect(parsed.params).toEqual(previousParams);
+    expect(parsed.params).toEqual({ N: 131_072, r: 8, p: 1 });
   });
 
   it.each(['', 'not base64', 'AAAA', 'VFhDVAEBARMAAgAAA'])('rejects malformed input', (value) => {
